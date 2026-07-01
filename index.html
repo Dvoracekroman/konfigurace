@@ -20,6 +20,35 @@
 </head>
 <body>
 <div id="root"></div>
+<script>
+/* Hlásič chyb — zobrazí problém přímo na obrazovce (ES5, běží na všech zařízeních) */
+(function () {
+  function show(msg) {
+    var r = document.getElementById('root');
+    if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
+      r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#b91c1c;font-size:14px;line-height:1.5">'
+        + '<strong>Chyba při načítání (v10)</strong><br>' + msg + '</div>';
+    }
+  }
+  window.addEventListener('error', function (e) {
+    var m = e && e.message ? e.message : 'neznámá chyba';
+    var src = e && e.filename ? (' — ' + e.filename + ':' + (e.lineno || '')) : '';
+    show(m + src);
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    show('Promise: ' + (r && r.message ? r.message : r));
+  });
+  setTimeout(function () {
+    var r = document.getElementById('root');
+    if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
+      r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#334155;font-size:14px;line-height:1.5">'
+        + '<strong>Verze v10 se načetla, ale aplikace se nevykreslila.</strong><br>'
+        + 'Zkuste stránku obnovit. Pokud to trvá, napište mi to.</div>';
+    }
+  }, 5000);
+})();
+</script>
 <script>/**
  * @license React
  * react.production.min.js
@@ -932,7 +961,7 @@ const PenLine = ({
 }));
 
 // === Konstanty ===
-const APP_VERSION = 'v8';
+const APP_VERSION = 'v10';
 const COMPANY_EMAIL = 'Dvoracekroman@gmail.com';
 const TECHNICIAN_NAME = 'Roman Dvořáček';
 const COMPANY_NAME = 'Laundry Cloud s.r.o.';
@@ -1445,10 +1474,11 @@ function FormView({
     }
     const subject = `Servisní protokol ${p.id}${p.customer ? ' - ' + p.customer : ''}`;
     const body = `Dobrý den,\n\nv příloze zasílám servisní protokol ${p.id} ze dne ${formatCZ(p.serviceDate)}.\n\nS pozdravem,\n${TECHNICIAN_NAME}\n${COMPANY_NAME}\n${COMPANY_ADDRESS}`;
+    const safeName = subject.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90);
     setShareItem({
       subject,
       body,
-      fileName: `${p.id}.pdf`
+      fileName: `${safeName}.pdf`
     });
   };
   const handleExportPDF = () => {
