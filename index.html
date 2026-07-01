@@ -27,7 +27,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#b91c1c;font-size:14px;line-height:1.5">'
-        + '<strong>Chyba při načítání (v12)</strong><br>' + msg + '</div>';
+        + '<strong>Chyba při načítání (v14)</strong><br>' + msg + '</div>';
     }
   }
   window.addEventListener('error', function (e) {
@@ -43,7 +43,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#334155;font-size:14px;line-height:1.5">'
-        + '<strong>Verze v12 se načetla, ale aplikace se nevykreslila.</strong><br>'
+        + '<strong>Verze v14 se načetla, ale aplikace se nevykreslila.</strong><br>'
         + 'Zkuste stránku obnovit. Pokud to trvá, napište mi to.</div>';
     }
   }, 5000);
@@ -959,7 +959,7 @@ var PenLine = ({
 }));
 
 // === Konstanty ===
-var APP_VERSION = 'v12';
+var APP_VERSION = 'v14';
 var COMPANY_EMAIL = 'Dvoracekroman@gmail.com';
 var TECHNICIAN_NAME = 'Roman Dvořáček';
 var COMPANY_NAME = 'Laundry Cloud s.r.o.';
@@ -1145,7 +1145,11 @@ var blankProtocol = () => ({
   workHours: '',
   travelKm: '',
   workDescription: '',
+  recommendations: '',
   parts: [],
+  partsToOrder: [],
+  repairCompleted: true,
+  plannedVisits: [],
   trainingDone: false,
   trainingScope: '',
   trainingDate: '',
@@ -1670,7 +1674,50 @@ function FormView({
     parts: p.parts,
     onChange: parts => update('parts', parts),
     readOnly: isClosed
-  })), /*#__PURE__*/React.createElement(Section, {
+  }), /*#__PURE__*/React.createElement(OrderPartsTable, {
+    parts: p.partsToOrder,
+    onChange: v => update('partsToOrder', v),
+    readOnly: isClosed
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-medium text-slate-600 mb-1"
+  }, "Doporučení po servisním zásahu"), /*#__PURE__*/React.createElement("textarea", {
+    value: p.recommendations,
+    onChange: e => update('recommendations', e.target.value),
+    readOnly: isClosed,
+    rows: 3,
+    placeholder: "Např. doporučená výměna dílu, termín další údržby, provozní pokyny pro obsluhu…",
+    className: `w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isClosed ? 'bg-slate-50' : 'bg-white'}`
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2"
+  }, "Stav opravy"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap items-center gap-4"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 cursor-pointer"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "radio",
+    checked: p.repairCompleted === true,
+    onChange: () => update('repairCompleted', true),
+    disabled: isClosed
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-sm"
+  }, "Oprava dokončena")), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 cursor-pointer"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "radio",
+    checked: p.repairCompleted === false,
+    onChange: () => update('repairCompleted', false),
+    disabled: isClosed
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-sm"
+  }, "Vyžaduje další zásah"))), p.repairCompleted === false && /*#__PURE__*/React.createElement(PlannedVisitsTable, {
+    visits: p.plannedVisits,
+    onChange: v => update('plannedVisits', v),
+    readOnly: isClosed
+  }))), /*#__PURE__*/React.createElement(Section, {
     number: "4",
     title: "Školení obsluhy"
   }, /*#__PURE__*/React.createElement("div", {
@@ -2283,6 +2330,160 @@ function PartsTable({
   }, /*#__PURE__*/React.createElement(Plus, {
     className: "w-4 h-4"
   }), " Přidat díl"));
+}
+function OrderPartsTable({
+  parts,
+  onChange,
+  readOnly
+}) {
+  var add = () => onChange([...(parts || []), {
+    name: '',
+    code: '',
+    qty: '',
+    status: 'K objednání'
+  }]);
+  var remove = idx => onChange(parts.filter((_, i) => i !== idx));
+  var updateRow = (idx, key, val) => {
+    var next = [...parts];
+    next[idx] = _objectSpread(_objectSpread({}, next[idx]), {}, {
+      [key]: val
+    });
+    onChange(next);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mt-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2"
+  }, "Díly k objednání"), !parts || parts.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-sm text-slate-400 italic py-2"
+  }, "Žádné díly k objednání") : /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-sm"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-slate-100 text-slate-700"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-2 py-1.5 font-semibold"
+  }, "Název dílu"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-2 py-1.5 font-semibold"
+  }, "Kód"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-2 py-1.5 font-semibold w-16"
+  }, "Ks"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-2 py-1.5 font-semibold w-36"
+  }, "Stav"), !readOnly && /*#__PURE__*/React.createElement("th", {
+    className: "w-10 print:hidden"
+  }))), /*#__PURE__*/React.createElement("tbody", null, parts.map((part, idx) => /*#__PURE__*/React.createElement("tr", {
+    key: idx,
+    className: "border-b border-slate-100"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "p-1"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: `w-full px-2 py-1 border border-slate-200 rounded ${readOnly ? 'bg-slate-50' : 'bg-white'}`,
+    value: part.name,
+    onChange: e => updateRow(idx, 'name', e.target.value),
+    readOnly: readOnly
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "p-1"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: `w-full px-2 py-1 border border-slate-200 rounded ${readOnly ? 'bg-slate-50' : 'bg-white'}`,
+    value: part.code,
+    onChange: e => updateRow(idx, 'code', e.target.value),
+    readOnly: readOnly
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "p-1"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: `w-full px-2 py-1 border border-slate-200 rounded ${readOnly ? 'bg-slate-50' : 'bg-white'}`,
+    value: part.qty,
+    onChange: e => updateRow(idx, 'qty', e.target.value),
+    readOnly: readOnly
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "p-1"
+  }, /*#__PURE__*/React.createElement("select", {
+    className: `w-full px-2 py-1 border border-slate-200 rounded ${readOnly ? 'bg-slate-50' : 'bg-white'}`,
+    value: part.status || 'K objednání',
+    onChange: e => updateRow(idx, 'status', e.target.value),
+    disabled: readOnly
+  }, /*#__PURE__*/React.createElement("option", null, "K objednání"), /*#__PURE__*/React.createElement("option", null, "Objednáno"), /*#__PURE__*/React.createElement("option", null, "Doručeno"))), !readOnly && /*#__PURE__*/React.createElement("td", {
+    className: "p-1 print:hidden"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => remove(idx),
+    className: "text-red-600 hover:bg-red-50 p-1 rounded"
+  }, /*#__PURE__*/React.createElement(X, {
+    className: "w-4 h-4"
+  })))))))), !readOnly && /*#__PURE__*/React.createElement("button", {
+    onClick: add,
+    className: "mt-2 text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 print:hidden"
+  }, /*#__PURE__*/React.createElement(Plus, {
+    className: "w-4 h-4"
+  }), " Přidat díl k objednání"));
+}
+function PlannedVisitsTable({
+  visits,
+  onChange,
+  readOnly
+}) {
+  var add = () => onChange([...(visits || []), {
+    date: '',
+    description: ''
+  }]);
+  var remove = idx => onChange(visits.filter((_, i) => i !== idx));
+  var updateRow = (idx, key, val) => {
+    var next = [...visits];
+    next[idx] = _objectSpread(_objectSpread({}, next[idx]), {}, {
+      [key]: val
+    });
+    onChange(next);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mt-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2"
+  }, "Naplánované další zásahy"), !visits || visits.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-sm text-slate-400 italic py-2"
+  }, "Zatím nic naplánováno") : /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-sm"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-slate-100 text-slate-700"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-2 py-1.5 font-semibold w-40"
+  }, "Datum"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left px-2 py-1.5 font-semibold"
+  }, "Co je potřeba udělat"), !readOnly && /*#__PURE__*/React.createElement("th", {
+    className: "w-10 print:hidden"
+  }))), /*#__PURE__*/React.createElement("tbody", null, visits.map((v, idx) => /*#__PURE__*/React.createElement("tr", {
+    key: idx,
+    className: "border-b border-slate-100"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "p-1"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    className: `w-full px-2 py-1 border border-slate-200 rounded ${readOnly ? 'bg-slate-50' : 'bg-white'}`,
+    value: v.date,
+    onChange: e => updateRow(idx, 'date', e.target.value),
+    readOnly: readOnly
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "p-1"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: `w-full px-2 py-1 border border-slate-200 rounded ${readOnly ? 'bg-slate-50' : 'bg-white'}`,
+    value: v.description,
+    onChange: e => updateRow(idx, 'description', e.target.value),
+    readOnly: readOnly,
+    placeholder: "popis plánovaného zásahu"
+  })), !readOnly && /*#__PURE__*/React.createElement("td", {
+    className: "p-1 print:hidden"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => remove(idx),
+    className: "text-red-600 hover:bg-red-50 p-1 rounded"
+  }, /*#__PURE__*/React.createElement(X, {
+    className: "w-4 h-4"
+  })))))))), !readOnly && /*#__PURE__*/React.createElement("button", {
+    onClick: add,
+    className: "mt-2 text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 print:hidden"
+  }, /*#__PURE__*/React.createElement(Plus, {
+    className: "w-4 h-4"
+  }), " Přidat plánovaný zásah"));
 }
 function TrainedPersonsTable({
   persons,
