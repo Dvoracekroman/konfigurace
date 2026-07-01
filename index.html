@@ -27,7 +27,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#b91c1c;font-size:14px;line-height:1.5">'
-        + '<strong>Chyba při načítání (v10)</strong><br>' + msg + '</div>';
+        + '<strong>Chyba při načítání (v12)</strong><br>' + msg + '</div>';
     }
   }
   window.addEventListener('error', function (e) {
@@ -43,7 +43,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#334155;font-size:14px;line-height:1.5">'
-        + '<strong>Verze v10 se načetla, ale aplikace se nevykreslila.</strong><br>'
+        + '<strong>Verze v12 se načetla, ale aplikace se nevykreslila.</strong><br>'
         + 'Zkuste stránku obnovit. Pokud to trvá, napište mi to.</div>';
     }
   }, 5000);
@@ -747,12 +747,12 @@ var useState = React.useState,
   useRef = React.useRef;
 
 /* Ukládání do zařízení (IndexedDB) — stejné rozhraní jako vestavěné úložiště */
-const storage = (() => {
-  const DBN = 'laundrycloud',
+var storage = (() => {
+  var DBN = 'laundrycloud',
     STORE = 'kv';
   function open() {
     return new Promise((res, rej) => {
-      const r = indexedDB.open(DBN, 1);
+      var r = indexedDB.open(DBN, 1);
       r.onupgradeneeded = () => {
         r.result.createObjectStore(STORE);
       };
@@ -761,18 +761,18 @@ const storage = (() => {
     });
   }
   async function run(mode, op) {
-    const db = await open();
+    var db = await open();
     return new Promise((res, rej) => {
-      const t = db.transaction(STORE, mode);
-      const s = t.objectStore(STORE);
-      const req = op(s);
+      var t = db.transaction(STORE, mode);
+      var s = t.objectStore(STORE);
+      var req = op(s);
       req.onsuccess = () => res(req.result);
       req.onerror = () => rej(req.error);
     });
   }
   return {
     async get(key) {
-      const v = await run('readonly', s => s.get(key));
+      var v = await run('readonly', s => s.get(key));
       return v === undefined || v === null ? null : {
         key,
         value: v
@@ -793,7 +793,7 @@ const storage = (() => {
       };
     },
     async list(prefix = '') {
-      const keys = await run('readonly', s => s.getAllKeys());
+      var keys = await run('readonly', s => s.getAllKeys());
       return {
         keys: (keys || []).map(String).filter(k => k.startsWith(prefix)),
         prefix
@@ -803,7 +803,7 @@ const storage = (() => {
 })();
 
 /* Ikony (inline SVG, náhrada za lucide-react) */
-const Svg = ({
+var Svg = ({
   children,
   className
 }) => /*#__PURE__*/React.createElement("svg", {
@@ -815,21 +815,21 @@ const Svg = ({
   strokeLinejoin: "round",
   className: className
 }, children);
-const Plus = ({
+var Plus = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
 }, /*#__PURE__*/React.createElement("path", {
   d: "M12 5v14M5 12h14"
 }));
-const X = ({
+var X = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
 }, /*#__PURE__*/React.createElement("path", {
   d: "M18 6 6 18M6 6l12 12"
 }));
-const Search = ({
+var Search = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
@@ -840,14 +840,14 @@ const Search = ({
 }), /*#__PURE__*/React.createElement("path", {
   d: "m21 21-4.3-4.3"
 }));
-const Trash2 = ({
+var Trash2 = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
 }, /*#__PURE__*/React.createElement("path", {
   d: "M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"
 }));
-const Lock = ({
+var Lock = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
@@ -860,7 +860,7 @@ const Lock = ({
 }), /*#__PURE__*/React.createElement("path", {
   d: "M7 11V7a5 5 0 0 1 10 0v4"
 }));
-const Mail = ({
+var Mail = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
@@ -873,21 +873,21 @@ const Mail = ({
 }), /*#__PURE__*/React.createElement("path", {
   d: "m22 7-10 6L2 7"
 }));
-const Download = ({
+var Download = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
 }, /*#__PURE__*/React.createElement("path", {
   d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"
 }));
-const ArrowLeft = ({
+var ArrowLeft = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
 }, /*#__PURE__*/React.createElement("path", {
   d: "M19 12H5M12 19l-7-7 7-7"
 }));
-const Camera = ({
+var Camera = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
@@ -898,7 +898,7 @@ const Camera = ({
   cy: "13",
   r: "4"
 }));
-const AlertCircle = ({
+var AlertCircle = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
@@ -909,7 +909,7 @@ const AlertCircle = ({
 }), /*#__PURE__*/React.createElement("path", {
   d: "M12 8v4M12 16h.01"
 }));
-const Save = ({
+var Save = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
@@ -918,14 +918,14 @@ const Save = ({
 }), /*#__PURE__*/React.createElement("path", {
   d: "M17 21v-8H7v8M7 3v5h8"
 }));
-const Edit3 = ({
+var Edit3 = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
 }, /*#__PURE__*/React.createElement("path", {
   d: "M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"
 }));
-const FileText = ({
+var FileText = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
@@ -934,14 +934,14 @@ const FileText = ({
 }), /*#__PURE__*/React.createElement("path", {
   d: "M14 2v6h6M16 13H8M16 17H8M10 9H8"
 }));
-const Loader2 = ({
+var Loader2 = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
 }, /*#__PURE__*/React.createElement("path", {
   d: "M21 12a9 9 0 1 1-6.219-8.56"
 }));
-const Building2 = ({
+var Building2 = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
@@ -950,7 +950,7 @@ const Building2 = ({
 }), /*#__PURE__*/React.createElement("path", {
   d: "M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2M10 6h4M10 10h4M10 14h4M10 18h4"
 }));
-const PenLine = ({
+var PenLine = ({
   className
 }) => /*#__PURE__*/React.createElement(Svg, {
   className: className
@@ -959,39 +959,39 @@ const PenLine = ({
 }));
 
 // === Konstanty ===
-const APP_VERSION = 'v11';
-const COMPANY_EMAIL = 'Dvoracekroman@gmail.com';
-const TECHNICIAN_NAME = 'Roman Dvořáček';
-const COMPANY_NAME = 'Laundry Cloud s.r.o.';
-const COMPANY_ADDRESS = 'Čajkovského 4275/46, 695 01 Hodonín';
-const COMPANY_ICO = '10704396';
-const COMPANY_DIC = 'CZ10704396';
+var APP_VERSION = 'v12';
+var COMPANY_EMAIL = 'Dvoracekroman@gmail.com';
+var TECHNICIAN_NAME = 'Roman Dvořáček';
+var COMPANY_NAME = 'Laundry Cloud s.r.o.';
+var COMPANY_ADDRESS = 'Čajkovského 4275/46, 695 01 Hodonín';
+var COMPANY_ICO = '10704396';
+var COMPANY_DIC = 'CZ10704396';
 
 // === Pomocné funkce ===
-const todayISO = () => {
-  const d = new Date();
+var todayISO = () => {
+  var d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-const formatCZ = iso => {
+var formatCZ = iso => {
   if (!iso) return '';
-  const parts = iso.split('-');
+  var parts = iso.split('-');
   if (parts.length !== 3) return iso;
   return `${parseInt(parts[2])}.${parseInt(parts[1])}.${parts[0]}`;
 };
-const formatDateTimeCZ = iso => {
+var formatDateTimeCZ = iso => {
   if (!iso) return '';
-  const d = new Date(iso);
+  var d = new Date(iso);
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
-const compactDate = iso => (iso || todayISO()).replace(/-/g, '');
-const generateProtocolNumber = async () => {
-  const date = compactDate(todayISO());
+var compactDate = iso => (iso || todayISO()).replace(/-/g, '');
+var generateProtocolNumber = async () => {
+  var date = compactDate(todayISO());
   try {
-    const result = await storage.list(`protocols:SP-${date}-`);
-    const keys = (result === null || result === void 0 ? void 0 : result.keys) || [];
-    let max = 0;
+    var result = await storage.list(`protocols:SP-${date}-`);
+    var keys = (result === null || result === void 0 ? void 0 : result.keys) || [];
+    var max = 0;
     keys.forEach(k => {
-      const m = k.match(/-(\d+)$/);
+      var m = k.match(/-(\d+)$/);
       if (m) max = Math.max(max, parseInt(m[1]));
     });
     return `SP-${date}-${String(max + 1).padStart(2, '0')}`;
@@ -1001,26 +1001,26 @@ const generateProtocolNumber = async () => {
 };
 
 // Kontrola platnosti IČO: 8 číslic + kontrolní číslice (mod 11)
-const validIco = ico => {
+var validIco = ico => {
   if (!/^\d{8}$/.test(ico)) return false;
-  const d = ico.split('').map(Number);
-  let sum = 0;
-  for (let i = 0; i < 7; i++) sum += d[i] * (8 - i);
-  const mod = sum % 11;
-  let check;
+  var d = ico.split('').map(Number);
+  var sum = 0;
+  for (var i = 0; i < 7; i++) sum += d[i] * (8 - i);
+  var mod = sum % 11;
+  var check;
   if (mod === 0) check = 1;else if (mod === 1) check = 0;else check = 11 - mod;
   return check === d[7];
 };
 
 // Načtení firemních údajů z ARES podle IČO (přímé volání API)
-const fetchAres = async ico => {
+var fetchAres = async ico => {
   var _data$sidlo, _data$sidlo2;
-  const res = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
+  var res = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
   if (res.status === 404) return {
     notFound: true
   };
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
+  var data = await res.json();
   return {
     customer: data.obchodniJmeno || '',
     address: ((_data$sidlo = data.sidlo) === null || _data$sidlo === void 0 ? void 0 : _data$sidlo.textovaAdresa) || '',
@@ -1030,8 +1030,8 @@ const fetchAres = async ico => {
 };
 
 // Záložní načtení přes vyhledávání (když prostředí blokuje přímé volání ARES)
-const fetchAresFallback = async ico => {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+var fetchAresFallback = async ico => {
+  var res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -1050,11 +1050,11 @@ const fetchAresFallback = async ico => {
     })
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
-  const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
-  const match = text.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
+  var data = await res.json();
+  var text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+  var match = text.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
   if (!match) throw new Error('Nečitelná odpověď');
-  const parsed = JSON.parse(match[0]);
+  var parsed = JSON.parse(match[0]);
   if (parsed.notFound) return {
     notFound: true
   };
@@ -1067,28 +1067,28 @@ const fetchAresFallback = async ico => {
 // Vytvoří PDF protokolu jako Blob (pro sdílení / přílohu e-mailu).
 // Vyžaduje knihovny html2canvas a jspdf — jsou součástí nasazené (HTML) verze.
 async function buildPdfBlob() {
-  const el = document.getElementById('protocol-print-area');
+  var el = document.getElementById('protocol-print-area');
   if (!el || typeof window.html2canvas !== 'function' || !window.jspdf) return null;
-  const canvas = await window.html2canvas(el, {
+  var canvas = await window.html2canvas(el, {
     scale: 2,
     backgroundColor: '#ffffff',
     useCORS: true,
     ignoreElements: n => !!(n.classList && n.classList.contains('print:hidden'))
   });
-  const {
+  var {
     jsPDF
   } = window.jspdf;
-  const pdf = new jsPDF({
+  var pdf = new jsPDF({
     unit: 'mm',
     format: 'a4'
   });
-  const pageW = pdf.internal.pageSize.getWidth();
-  const pageH = pdf.internal.pageSize.getHeight();
-  const imgW = pageW;
-  const imgH = canvas.height * imgW / canvas.width;
-  const imgData = canvas.toDataURL('image/jpeg', 0.92);
-  let position = 0;
-  let heightLeft = imgH;
+  var pageW = pdf.internal.pageSize.getWidth();
+  var pageH = pdf.internal.pageSize.getHeight();
+  var imgW = pageW;
+  var imgH = canvas.height * imgW / canvas.width;
+  var imgData = canvas.toDataURL('image/jpeg', 0.92);
+  var position = 0;
+  var heightLeft = imgH;
   pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
   heightLeft -= pageH;
   while (heightLeft > 0) {
@@ -1099,19 +1099,19 @@ async function buildPdfBlob() {
   }
   return pdf.output('blob');
 }
-const compressImage = file => new Promise((resolve, reject) => {
-  const reader = new FileReader();
+var compressImage = file => new Promise((resolve, reject) => {
+  var reader = new FileReader();
   reader.onload = e => {
-    const img = new Image();
+    var img = new Image();
     img.onload = () => {
-      const maxW = 1200;
-      const scale = Math.min(1, maxW / img.width);
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      const canvas = document.createElement('canvas');
+      var maxW = 1200;
+      var scale = Math.min(1, maxW / img.width);
+      var w = Math.round(img.width * scale);
+      var h = Math.round(img.height * scale);
+      var canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
-      const ctx = canvas.getContext('2d');
+      var ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, w, h);
       resolve(canvas.toDataURL('image/jpeg', 0.7));
     };
@@ -1121,7 +1121,7 @@ const compressImage = file => new Promise((resolve, reject) => {
   reader.onerror = reject;
   reader.readAsDataURL(file);
 });
-const blankProtocol = () => ({
+var blankProtocol = () => ({
   id: null,
   status: 'draft',
   createdAt: new Date().toISOString(),
@@ -1159,23 +1159,23 @@ const blankProtocol = () => ({
 
 // === Hlavní aplikace ===
 function App() {
-  const [view, setView] = useState('list');
-  const [protocols, setProtocols] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [current, setCurrent] = useState(null);
-  const [search, setSearch] = useState('');
-  const [toast, setToast] = useState(null);
+  var [view, setView] = useState('list');
+  var [protocols, setProtocols] = useState([]);
+  var [loading, setLoading] = useState(true);
+  var [current, setCurrent] = useState(null);
+  var [search, setSearch] = useState('');
+  var [toast, setToast] = useState(null);
   useEffect(() => {
     loadProtocols();
   }, []);
-  const loadProtocols = async () => {
+  var loadProtocols = async () => {
     setLoading(true);
     try {
-      const result = await storage.list('protocols:');
-      const keys = (result === null || result === void 0 ? void 0 : result.keys) || [];
-      const items = await Promise.all(keys.map(async k => {
+      var result = await storage.list('protocols:');
+      var keys = (result === null || result === void 0 ? void 0 : result.keys) || [];
+      var items = await Promise.all(keys.map(async k => {
         try {
-          const r = await storage.get(k);
+          var r = await storage.get(k);
           return JSON.parse(r.value);
         } catch (_unused2) {
           return null;
@@ -1187,24 +1187,24 @@ function App() {
     }
     setLoading(false);
   };
-  const showToast = (msg, type = 'success') => {
+  var showToast = (msg, type = 'success') => {
     setToast({
       msg,
       type
     });
     setTimeout(() => setToast(null), 3000);
   };
-  const handleNew = async () => {
-    const p = blankProtocol();
+  var handleNew = async () => {
+    var p = blankProtocol();
     p.id = await generateProtocolNumber();
     setCurrent(p);
     setView('form');
   };
-  const handleOpen = protocol => {
+  var handleOpen = protocol => {
     setCurrent(protocol);
     setView('form');
   };
-  const handleSave = async protocol => {
+  var handleSave = async protocol => {
     try {
       await storage.set(`protocols:${protocol.id}`, JSON.stringify(protocol));
       showToast('Uloženo');
@@ -1216,24 +1216,24 @@ function App() {
       return false;
     }
   };
-  const handleClose = async protocol => {
-    const closed = _objectSpread(_objectSpread({}, protocol), {}, {
+  var handleClose = async protocol => {
+    var closed = _objectSpread(_objectSpread({}, protocol), {}, {
       status: 'closed',
       closedAt: new Date().toISOString()
     });
-    const ok = await handleSave(closed);
+    var ok = await handleSave(closed);
     if (ok) setCurrent(closed);
     return closed;
   };
-  const handleReopen = async protocol => {
-    const reopened = _objectSpread(_objectSpread({}, protocol), {}, {
+  var handleReopen = async protocol => {
+    var reopened = _objectSpread(_objectSpread({}, protocol), {}, {
       status: 'draft',
       closedAt: null
     });
     await handleSave(reopened);
     setCurrent(reopened);
   };
-  const handleDelete = async id => {
+  var handleDelete = async id => {
     if (!confirm(`Opravdu smazat protokol ${id}? Akce je nevratná.`)) return;
     try {
       await storage.delete(`protocols:${id}`);
@@ -1247,9 +1247,9 @@ function App() {
       showToast('Smazání selhalo', 'error');
     }
   };
-  const filtered = useMemo(() => {
+  var filtered = useMemo(() => {
     if (!search.trim()) return protocols;
-    const q = search.toLowerCase();
+    var q = search.toLowerCase();
     return protocols.filter(p => (p.id || '').toLowerCase().includes(q) || (p.customer || '').toLowerCase().includes(q) || (p.manufacturer || '').toLowerCase().includes(q) || (p.model || '').toLowerCase().includes(q) || (p.workDescription || '').toLowerCase().includes(q));
   }, [protocols, search]);
   return /*#__PURE__*/React.createElement("div", {
@@ -1352,7 +1352,7 @@ function ProtocolCard({
   onOpen,
   onDelete
 }) {
-  const machine = [protocol.manufacturer, protocol.model].filter(Boolean).join(' ');
+  var machine = [protocol.manufacturer, protocol.model].filter(Boolean).join(' ');
   return /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors overflow-hidden"
   }, /*#__PURE__*/React.createElement("button", {
@@ -1405,27 +1405,27 @@ function FormView({
   onDelete,
   showToast
 }) {
-  const [p, setP] = useState(protocol);
-  const [dirty, setDirty] = useState(false);
-  const [aresLoading, setAresLoading] = useState(false);
-  const [aresError, setAresError] = useState('');
-  const [signTarget, setSignTarget] = useState(null);
-  const [shareItem, setShareItem] = useState(null);
-  const isClosed = p.status === 'closed';
-  const update = (key, value) => {
+  var [p, setP] = useState(protocol);
+  var [dirty, setDirty] = useState(false);
+  var [aresLoading, setAresLoading] = useState(false);
+  var [aresError, setAresError] = useState('');
+  var [signTarget, setSignTarget] = useState(null);
+  var [shareItem, setShareItem] = useState(null);
+  var isClosed = p.status === 'closed';
+  var update = (key, value) => {
     setP(prev => _objectSpread(_objectSpread({}, prev), {}, {
       [key]: value
     }));
     setDirty(true);
   };
-  const handleAresLookup = async () => {
+  var handleAresLookup = async () => {
     setAresError('');
     if (!validIco(p.ico)) {
       setAresError('Neplatné IČO — zadej 8 číslic.');
       return;
     }
     setAresLoading(true);
-    let result = null;
+    var result = null;
     try {
       result = await fetchAres(p.ico);
     } catch (e) {
@@ -1450,49 +1450,49 @@ function FormView({
     }
     setAresLoading(false);
   };
-  const handleSaveClick = async () => {
-    const ok = await onSave(p);
+  var handleSaveClick = async () => {
+    var ok = await onSave(p);
     if (ok) setDirty(false);
   };
-  const handleCloseClick = async () => {
+  var handleCloseClick = async () => {
     if (!p.customer.trim()) {
       showToast('Doplň jméno zákazníka před uzavřením', 'error');
       return;
     }
     if (!confirm('Po uzavření už nepůjde protokol upravovat. Pokračovat?')) return;
-    const closed = await onClose(p);
+    var closed = await onClose(p);
     setP(closed);
     setDirty(false);
   };
-  const handleSendEmail = async () => {
+  var handleSendEmail = async () => {
     if (dirty) {
-      const ok = await onSave(p);
+      var ok = await onSave(p);
       if (!ok) return;
       setDirty(false);
     }
-    const subject = `Servisní protokol ${p.id}${p.customer ? ' - ' + p.customer : ''}`;
-    const body = `Dobrý den,\n\nv příloze zasílám servisní protokol ${p.id} ze dne ${formatCZ(p.serviceDate)}.\n\nS pozdravem,\n${TECHNICIAN_NAME}\n${COMPANY_NAME}\n${COMPANY_ADDRESS}`;
-    const safeName = subject.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90);
+    var subject = `Servisní protokol ${p.id}${p.customer ? ' - ' + p.customer : ''}`;
+    var body = `Dobrý den,\n\nv příloze zasílám servisní protokol ${p.id} ze dne ${formatCZ(p.serviceDate)}.\n\nS pozdravem,\n${TECHNICIAN_NAME}\n${COMPANY_NAME}\n${COMPANY_ADDRESS}`;
+    var safeName = subject.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90);
     setShareItem({
       subject,
       body,
       fileName: `${safeName}.pdf`
     });
   };
-  const handleExportPDF = () => {
+  var handleExportPDF = () => {
     window.print();
   };
-  const addPhoto = async (kind, file) => {
+  var addPhoto = async (kind, file) => {
     try {
-      const dataUrl = await compressImage(file);
-      const key = kind === 'before' ? 'photosBefore' : 'photosAfter';
+      var dataUrl = await compressImage(file);
+      var key = kind === 'before' ? 'photosBefore' : 'photosAfter';
       update(key, [...(p[key] || []), dataUrl]);
     } catch (e) {
       showToast('Načtení fotky selhalo', 'error');
     }
   };
-  const removePhoto = (kind, idx) => {
-    const key = kind === 'before' ? 'photosBefore' : 'photosAfter';
+  var removePhoto = (kind, idx) => {
+    var key = kind === 'before' ? 'photosBefore' : 'photosAfter';
     update(key, p[key].filter((_, i) => i !== idx));
   };
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -1840,7 +1840,7 @@ function Grid({
   cols,
   children
 }) {
-  const classes = {
+  var classes = {
     2: 'grid grid-cols-1 sm:grid-cols-2 gap-3',
     3: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3',
     4: 'grid grid-cols-2 lg:grid-cols-4 gap-3'
@@ -1894,15 +1894,15 @@ function ShareModal({
   onClose,
   showToast
 }) {
-  const [state, setState] = useState('loading'); // loading | ready | error
-  const [errMsg, setErrMsg] = useState('');
-  const blobRef = useRef(null);
-  const fileRef = useRef(null);
+  var [state, setState] = useState('loading'); // loading | ready | error
+  var [errMsg, setErrMsg] = useState('');
+  var blobRef = useRef(null);
+  var fileRef = useRef(null);
   useEffect(() => {
-    let cancelled = false;
+    var cancelled = false;
     (async () => {
       try {
-        const blob = await buildPdfBlob();
+        var blob = await buildPdfBlob();
         if (cancelled) return;
         if (!blob) {
           setErrMsg('Knihovna pro tvorbu PDF se nenačetla.');
@@ -1924,7 +1924,7 @@ function ShareModal({
       cancelled = true;
     };
   }, []);
-  let canShareFiles = false;
+  var canShareFiles = false;
   if (state === 'ready' && fileRef.current) {
     try {
       canShareFiles = typeof navigator !== 'undefined' && !!navigator.canShare && navigator.canShare({
@@ -1934,7 +1934,7 @@ function ShareModal({
       canShareFiles = false;
     }
   }
-  const doShare = async () => {
+  var doShare = async () => {
     try {
       await navigator.share({
         files: [fileRef.current],
@@ -1947,9 +1947,9 @@ function ShareModal({
       if (showToast) showToast('Sdílení se nepodařilo — zkus Stáhnout PDF', 'error');
     }
   };
-  const doDownload = () => {
-    const u = URL.createObjectURL(blobRef.current);
-    const a = document.createElement('a');
+  var doDownload = () => {
+    var u = URL.createObjectURL(blobRef.current);
+    var a = document.createElement('a');
     a.href = u;
     a.download = fileName || 'protokol.pdf';
     document.body.appendChild(a);
@@ -1958,13 +1958,13 @@ function ShareModal({
     setTimeout(() => URL.revokeObjectURL(u), 5000);
     if (showToast) showToast('PDF uloženo — najdeš ho v Souborech');
   };
-  const doMail = () => {
-    const cc = encodeURIComponent(COMPANY_EMAIL);
-    const su = encodeURIComponent(subject);
-    const bo = encodeURIComponent(body);
+  var doMail = () => {
+    var cc = encodeURIComponent(COMPANY_EMAIL);
+    var su = encodeURIComponent(subject);
+    var bo = encodeURIComponent(body);
     window.location.href = `mailto:${customerEmail || ''}?cc=${cc}&subject=${su}&body=${bo}`;
   };
-  const itemBtn = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-left';
+  var itemBtn = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-left';
   return /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4 print:hidden"
   }, /*#__PURE__*/React.createElement("div", {
@@ -2020,21 +2020,21 @@ function SignaturePad({
   onSave,
   onClose
 }) {
-  const canvasRef = useRef(null);
-  const drawing = useRef(false);
-  const last = useRef({
+  var canvasRef = useRef(null);
+  var drawing = useRef(false);
+  var last = useRef({
     x: 0,
     y: 0
   });
-  const [hasInk, setHasInk] = useState(false);
+  var [hasInk, setHasInk] = useState(false);
   useEffect(() => {
-    const canvas = canvasRef.current;
+    var canvas = canvasRef.current;
     if (!canvas) return;
-    const ratio = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
+    var ratio = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * ratio;
     canvas.height = rect.height * ratio;
-    const ctx = canvas.getContext('2d');
+    var ctx = canvas.getContext('2d');
     ctx.scale(ratio, ratio);
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
@@ -2043,25 +2043,25 @@ function SignaturePad({
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, rect.width, rect.height);
   }, []);
-  const getPos = e => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+  var getPos = e => {
+    var rect = canvasRef.current.getBoundingClientRect();
+    var cx = e.touches ? e.touches[0].clientX : e.clientX;
+    var cy = e.touches ? e.touches[0].clientY : e.clientY;
     return {
       x: cx - rect.left,
       y: cy - rect.top
     };
   };
-  const start = e => {
+  var start = e => {
     e.preventDefault();
     drawing.current = true;
     last.current = getPos(e);
   };
-  const move = e => {
+  var move = e => {
     if (!drawing.current) return;
     e.preventDefault();
-    const ctx = canvasRef.current.getContext('2d');
-    const pos = getPos(e);
+    var ctx = canvasRef.current.getContext('2d');
+    var pos = getPos(e);
     ctx.beginPath();
     ctx.moveTo(last.current.x, last.current.y);
     ctx.lineTo(pos.x, pos.y);
@@ -2069,19 +2069,19 @@ function SignaturePad({
     last.current = pos;
     if (!hasInk) setHasInk(true);
   };
-  const end = e => {
+  var end = e => {
     if (e) e.preventDefault();
     drawing.current = false;
   };
-  const clear = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
+  var clear = () => {
+    var canvas = canvasRef.current;
+    var ctx = canvas.getContext('2d');
+    var rect = canvas.getBoundingClientRect();
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, rect.width, rect.height);
     setHasInk(false);
   };
-  const save = () => {
+  var save = () => {
     if (!hasInk) {
       onClose();
       return;
@@ -2141,8 +2141,8 @@ function IcoField({
   error,
   readOnly
 }) {
-  const handleChange = e => onChange(e.target.value.replace(/\D/g, '').slice(0, 8));
-  const handleKeyDown = e => {
+  var handleChange = e => onChange(e.target.value.replace(/\D/g, '').slice(0, 8));
+  var handleKeyDown = e => {
     if (e.key === 'Enter' && !readOnly && value && value.length === 8) {
       e.preventDefault();
       onLookup();
@@ -2203,15 +2203,15 @@ function PartsTable({
   onChange,
   readOnly
 }) {
-  const add = () => onChange([...(parts || []), {
+  var add = () => onChange([...(parts || []), {
     name: '',
     code: '',
     qty: '',
     reason: ''
   }]);
-  const remove = idx => onChange(parts.filter((_, i) => i !== idx));
-  const updateRow = (idx, key, val) => {
-    const next = [...parts];
+  var remove = idx => onChange(parts.filter((_, i) => i !== idx));
+  var updateRow = (idx, key, val) => {
+    var next = [...parts];
     next[idx] = _objectSpread(_objectSpread({}, next[idx]), {}, {
       [key]: val
     });
@@ -2289,15 +2289,15 @@ function TrainedPersonsTable({
   onChange,
   readOnly
 }) {
-  const add = () => onChange([...(persons || []), {
+  var add = () => onChange([...(persons || []), {
     name: '',
     position: '',
     date: todayISO(),
     signature: ''
   }]);
-  const remove = idx => onChange(persons.filter((_, i) => i !== idx));
-  const updateRow = (idx, key, val) => {
-    const next = [...persons];
+  var remove = idx => onChange(persons.filter((_, i) => i !== idx));
+  var updateRow = (idx, key, val) => {
+    var next = [...persons];
     next[idx] = _objectSpread(_objectSpread({}, next[idx]), {}, {
       [key]: val
     });
@@ -2379,9 +2379,9 @@ function PhotoSection({
   onRemove,
   readOnly
 }) {
-  const fileRef = useRef(null);
-  const handleFiles = async files => {
-    for (const f of Array.from(files)) {
+  var fileRef = useRef(null);
+  var handleFiles = async files => {
+    for (var f of Array.from(files)) {
       if (f.type.startsWith('image/')) {
         await onAdd(f);
       }
@@ -2426,7 +2426,7 @@ function PhotoSection({
     className: "hidden"
   }));
 }
-const rootEl = document.getElementById('root');
+var rootEl = document.getElementById('root');
 ReactDOM.createRoot(rootEl).render(/*#__PURE__*/React.createElement(App, null));
 } catch (e) {
   document.getElementById('root').innerHTML =
