@@ -27,7 +27,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#b91c1c;font-size:14px;line-height:1.5">'
-        + '<strong>Chyba při načítání (v14)</strong><br>' + msg + '</div>';
+        + '<strong>Chyba při načítání (v15)</strong><br>' + msg + '</div>';
     }
   }
   window.addEventListener('error', function (e) {
@@ -43,7 +43,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#334155;font-size:14px;line-height:1.5">'
-        + '<strong>Verze v14 se načetla, ale aplikace se nevykreslila.</strong><br>'
+        + '<strong>Verze v15 se načetla, ale aplikace se nevykreslila.</strong><br>'
         + 'Zkuste stránku obnovit. Pokud to trvá, napište mi to.</div>';
     }
   }, 5000);
@@ -959,7 +959,7 @@ var PenLine = ({
 }));
 
 // === Konstanty ===
-var APP_VERSION = 'v14';
+var APP_VERSION = 'v15';
 var COMPANY_EMAIL = 'Dvoracekroman@gmail.com';
 var TECHNICIAN_NAME = 'Roman Dvořáček';
 var COMPANY_NAME = 'Laundry Cloud s.r.o.';
@@ -1067,7 +1067,7 @@ var fetchAresFallback = async ico => {
 // Vytvoří PDF protokolu jako Blob (pro sdílení / přílohu e-mailu).
 // Vyžaduje knihovny html2canvas a jspdf — jsou součástí nasazené (HTML) verze.
 async function buildPdfBlob() {
-  var el = document.getElementById('protocol-print-area');
+  var el = document.getElementById('protocol-print-doc') || document.getElementById('protocol-print-area');
   if (!el || typeof window.html2canvas !== 'function' || !window.jspdf) return null;
   var canvas = await window.html2canvas(el, {
     scale: 2,
@@ -1483,8 +1483,27 @@ function FormView({
       fileName: `${safeName}.pdf`
     });
   };
-  var handleExportPDF = () => {
-    window.print();
+  var handleExportPDF = async () => {
+    showToast('Připravuji PDF…');
+    var blob = null;
+    try {
+      blob = await buildPdfBlob();
+    } catch (e) {
+      blob = null;
+    }
+    if (!blob) {
+      window.print();
+      return;
+    }
+    var u = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = u;
+    a.download = `${p.id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 5000);
+    showToast('PDF staženo');
   };
   var addPhoto = async (kind, file) => {
     try {
@@ -1839,6 +1858,8 @@ function FormView({
     customerEmail: p.email,
     onClose: () => setShareItem(null),
     showToast: showToast
+  }), /*#__PURE__*/React.createElement(PrintDocument, {
+    p: p
   }));
 }
 
@@ -1930,6 +1951,308 @@ function SignatureArea({
   }, /*#__PURE__*/React.createElement(PenLine, {
     className: "w-5 h-5"
   }), " Podepsat");
+}
+
+// === Čistá dokumentová podoba protokolu (skrytá, jen pro generování PDF) ===
+function DocField({
+  label,
+  value
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 break-inside-avoid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wide text-slate-500"
+  }, label), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm text-slate-900"
+  }, value && String(value).trim() ? value : '—'));
+}
+function DocSectionHead({
+  number,
+  title
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-800 text-white px-4 py-1.5 flex items-center gap-2 mt-4 rounded-sm"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-5 h-5 bg-blue-600 flex items-center justify-center font-bold text-[11px] rounded"
+  }, number), /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold text-xs tracking-wide uppercase"
+  }, title));
+}
+function DocText({
+  label,
+  value
+}) {
+  if (!value || !String(value).trim()) return null;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 mt-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-wide text-slate-500"
+  }, label), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm text-slate-900 whitespace-pre-wrap"
+  }, value));
+}
+function DocTable({
+  title,
+  rows,
+  cols,
+  emptyText
+}) {
+  var list = rows || [];
+  if (list.length === 0) {
+    if (!emptyText) return null;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "mt-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-semibold uppercase text-slate-600 mb-1"
+    }, title), /*#__PURE__*/React.createElement("div", {
+      className: "text-xs text-slate-400 italic"
+    }, emptyText));
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-semibold uppercase text-slate-600 mb-1"
+  }, title), /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-xs border border-slate-200"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-slate-100"
+  }, cols.map((c, i) => /*#__PURE__*/React.createElement("th", {
+    key: i,
+    className: "text-left px-2 py-1 font-semibold border-b border-slate-200"
+  }, c[1])))), /*#__PURE__*/React.createElement("tbody", null, list.map((row, ri) => /*#__PURE__*/React.createElement("tr", {
+    key: ri,
+    className: "border-b border-slate-100"
+  }, cols.map((c, ci) => {
+    var v = row[c[0]];
+    if (c[2] === 'date') v = formatCZ(v);
+    return /*#__PURE__*/React.createElement("td", {
+      key: ci,
+      className: "px-2 py-1 align-top text-slate-900"
+    }, v || '');
+  }))))));
+}
+function PrintDocument({
+  p
+}) {
+  var hasPhotos = p.photosBefore && p.photosBefore.length || p.photosAfter && p.photosAfter.length;
+  return /*#__PURE__*/React.createElement("div", {
+    id: "protocol-print-doc",
+    style: {
+      position: 'absolute',
+      left: '-10000px',
+      top: 0,
+      width: '794px',
+      background: '#ffffff'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white text-slate-900"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-900 text-white px-5 py-4 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-10 h-10 bg-blue-600 flex items-center justify-center font-bold text-sm rounded"
+  }, "LC"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "font-bold text-lg leading-tight"
+  }, "LaundryCloud"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-300"
+  }, "Smart systems for commercial laundries"))), /*#__PURE__*/React.createElement("div", {
+    className: "text-right"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-bold"
+  }, "SERVISNÍ PROTOKOL"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-300"
+  }, "Číslo protokolu: ", /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-bold text-white"
+  }, p.id)))), /*#__PURE__*/React.createElement("div", {
+    className: "px-5 pb-5"
+  }, /*#__PURE__*/React.createElement(DocSectionHead, {
+    number: "1",
+    title: "Základní údaje"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-x-6 pt-3"
+  }, /*#__PURE__*/React.createElement(DocField, {
+    label: "Zákazník",
+    value: p.customer
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "IČO",
+    value: p.ico
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Adresa zákazníka",
+    value: p.customerAddress
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Místo předání",
+    value: p.deliveryPlace
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Kontaktní osoba",
+    value: p.contactPerson
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Telefon",
+    value: p.phone
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "E-mail",
+    value: p.email
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Datum předání",
+    value: formatCZ(p.deliveryDate)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-[11px] text-slate-600 border-t border-slate-200 pt-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold"
+  }, "Dodavatel:"), " ", COMPANY_NAME, " • ", COMPANY_ADDRESS, " • IČO ", COMPANY_ICO, " • DIČ ", COMPANY_DIC), /*#__PURE__*/React.createElement(DocSectionHead, {
+    number: "2",
+    title: "Identifikace stroje"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-x-6 pt-3"
+  }, /*#__PURE__*/React.createElement(DocField, {
+    label: "Výrobce",
+    value: p.manufacturer
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Typ / Model",
+    value: p.model
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Výrobní číslo",
+    value: p.serialNumber
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Rok",
+    value: p.year
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Napájení",
+    value: p.power
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Kapacita (kg)",
+    value: p.capacity
+  })), /*#__PURE__*/React.createElement(DocSectionHead, {
+    number: "3",
+    title: "Servisní záznam"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-x-6 pt-3"
+  }, /*#__PURE__*/React.createElement(DocField, {
+    label: "Datum servisu",
+    value: formatCZ(p.serviceDate)
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Technik",
+    value: p.technician
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Doba práce (hod)",
+    value: p.workHours
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Doprava (km)",
+    value: p.travelKm
+  })), /*#__PURE__*/React.createElement(DocText, {
+    label: "Provedené práce / popis závady a řešení",
+    value: p.workDescription
+  }), /*#__PURE__*/React.createElement(DocTable, {
+    title: "Použité díly / materiál",
+    rows: p.parts,
+    cols: [['name', 'Název dílu'], ['code', 'Kód'], ['qty', 'Ks'], ['reason', 'Důvod výměny']],
+    emptyText: "Bez použitých dílů"
+  }), /*#__PURE__*/React.createElement(DocTable, {
+    title: "Díly k objednání",
+    rows: p.partsToOrder,
+    cols: [['name', 'Název dílu'], ['code', 'Kód'], ['qty', 'Ks'], ['status', 'Stav']],
+    emptyText: null
+  }), /*#__PURE__*/React.createElement(DocText, {
+    label: "Doporučení po servisním zásahu",
+    value: p.recommendations
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 text-sm"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] uppercase tracking-wide text-slate-500"
+  }, "Stav opravy: "), /*#__PURE__*/React.createElement("span", {
+    className: "font-medium"
+  }, p.repairCompleted ? 'Oprava dokončena' : 'Vyžaduje další zásah')), !p.repairCompleted && /*#__PURE__*/React.createElement(DocTable, {
+    title: "Naplánované další zásahy",
+    rows: p.plannedVisits,
+    cols: [['date', 'Datum', 'date'], ['description', 'Co je potřeba udělat']],
+    emptyText: null
+  }), /*#__PURE__*/React.createElement(DocSectionHead, {
+    number: "4",
+    title: "Školení obsluhy"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "pt-3 text-sm"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] uppercase tracking-wide text-slate-500"
+  }, "Školení provedeno: "), /*#__PURE__*/React.createElement("span", {
+    className: "font-medium"
+  }, p.trainingDone ? 'ANO' : 'NE')), p.trainingDone && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-x-6 pt-2"
+  }, /*#__PURE__*/React.createElement(DocField, {
+    label: "Rozsah školení",
+    value: p.trainingScope
+  }), /*#__PURE__*/React.createElement(DocField, {
+    label: "Datum školení",
+    value: formatCZ(p.trainingDate)
+  })), /*#__PURE__*/React.createElement(DocTable, {
+    title: "Školené osoby",
+    rows: p.trainedPersons,
+    cols: [['name', 'Jméno a příjmení'], ['position', 'Pozice'], ['date', 'Datum', 'date'], ['signature', 'Podpis']],
+    emptyText: null
+  })), hasPhotos ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(DocSectionHead, {
+    number: "5",
+    title: "Fotodokumentace"
+  }), p.photosBefore && p.photosBefore.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "pt-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-semibold uppercase text-slate-600 mb-1"
+  }, "Před zásahem"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-2"
+  }, p.photosBefore.map((s, i) => /*#__PURE__*/React.createElement("img", {
+    key: i,
+    src: s,
+    className: "h-36 rounded border border-slate-200",
+    alt: ""
+  })))), p.photosAfter && p.photosAfter.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "pt-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-semibold uppercase text-slate-600 mb-1"
+  }, "Po zásahu"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-2"
+  }, p.photosAfter.map((s, i) => /*#__PURE__*/React.createElement("img", {
+    key: i,
+    src: s,
+    className: "h-36 rounded border border-slate-200",
+    alt: ""
+  }))))) : null, /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 bg-amber-50 border border-amber-200 rounded p-3 text-[11px] text-amber-900"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold"
+  }, "⚠ Revize — informativní upozornění."), " Zákazník bere na vědomí povinnost zajistit po servisním zásahu provedení odborné revize elektroinstalace a v případě plynových zařízení také revize plynové dle platných předpisů."), /*#__PURE__*/React.createElement(DocSectionHead, {
+    number: "6",
+    title: "Prohlášení a podpisy"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-4 pt-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "border border-slate-200 rounded p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-semibold text-slate-500 mb-1"
+  }, "ZA DODAVATELE / SERVIS"), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium mb-1"
+  }, p.technician || TECHNICIAN_NAME), p.supplierSignature ? /*#__PURE__*/React.createElement("img", {
+    src: p.supplierSignature,
+    className: "h-16 object-contain",
+    alt: ""
+  }) : /*#__PURE__*/React.createElement("div", {
+    className: "h-16"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "border-t border-slate-300 mt-1 pt-1 text-[10px] text-slate-500"
+  }, "Podpis a datum")), /*#__PURE__*/React.createElement("div", {
+    className: "border border-slate-200 rounded p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-semibold text-slate-500 mb-1"
+  }, "ZA ZÁKAZNÍKA"), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium mb-1"
+  }, p.customerSignatureName || '—'), p.customerSignature ? /*#__PURE__*/React.createElement("img", {
+    src: p.customerSignature,
+    className: "h-16 object-contain",
+    alt: ""
+  }) : /*#__PURE__*/React.createElement("div", {
+    className: "h-16"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "border-t border-slate-300 mt-1 pt-1 text-[10px] text-slate-500"
+  }, "Jméno, podpis a datum"))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 text-[10px] text-slate-400 border-t border-slate-200 pt-2 text-center"
+  }, COMPANY_NAME, " • IČO ", COMPANY_ICO, " • ", COMPANY_ADDRESS))));
 }
 
 // Okno odeslání — otevře se hned, PDF se tvoří uvnitř; každá akce = samostatné ťuknutí (kvůli iOS sdílení)
