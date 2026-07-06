@@ -27,7 +27,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#b91c1c;font-size:14px;line-height:1.5">'
-        + '<strong>Chyba při načítání (v18)</strong><br>' + msg + '</div>';
+        + '<strong>Chyba při načítání (v19)</strong><br>' + msg + '</div>';
     }
   }
   window.addEventListener('error', function (e) {
@@ -43,7 +43,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#334155;font-size:14px;line-height:1.5">'
-        + '<strong>Verze v18 se načetla, ale aplikace se nevykreslila.</strong><br>'
+        + '<strong>Verze v19 se načetla, ale aplikace se nevykreslila.</strong><br>'
         + 'Zkuste stránku obnovit. Pokud to trvá, napište mi to.</div>';
     }
   }, 5000);
@@ -970,7 +970,7 @@ var Settings = ({
 }));
 
 // === Konstanty ===
-var APP_VERSION = 'v18';
+var APP_VERSION = 'v19';
 var COMPANY_EMAIL = 'Dvoracekroman@gmail.com';
 var TECHNICIAN_NAME = 'Roman Dvořáček';
 var COMPANY_NAME = 'Laundry Cloud s.r.o.';
@@ -1686,23 +1686,30 @@ function FormView({
 
   // Na pozadí: vytvoří náhled (dlaždice) a případně pošle PDF na Disk
   var afterSave = async proto => {
+    if (driveUrl) showToast('Ukládám na Disk…');
     try {
       var canvas = await captureDocCanvas();
-      if (!canvas) return;
+      if (!canvas) {
+        if (driveUrl) showToast('Nepodařilo se vytvořit PDF (náhled)', 'error');
+        return;
+      }
       var thumb = canvasToThumb(canvas);
-      var withThumb = _objectSpread(_objectSpread({}, proto), {}, {
+      await onSave(_objectSpread(_objectSpread({}, proto), {}, {
         thumbnail: thumb
-      });
-      await onSave(withThumb, true);
+      }), true);
       if (driveUrl) {
         var el = document.getElementById('protocol-print-doc');
         var blob = canvasToPdfBlob(canvas, el);
-        if (blob) {
-          showToast('Ukládám na Disk…');
-          uploadToDrive(driveUrl, blob, (proto.id || 'protokol') + '.pdf');
+        if (!blob) {
+          showToast('Nepodařilo se vytvořit PDF', 'error');
+          return;
         }
+        var sent = await uploadToDrive(driveUrl, blob, (proto.id || 'protokol') + '.pdf');
+        showToast(sent ? 'Odesláno na Disk — zkontroluj složku' : 'Odeslání na Disk selhalo', sent ? 'success' : 'error');
       }
-    } catch (e) {/* náhled/Disk jsou best-effort */}
+    } catch (e) {
+      if (driveUrl) showToast('Chyba při ukládání na Disk', 'error');
+    }
   };
   var handleSaveClick = async () => {
     var ok = await onSave(p);
@@ -2539,10 +2546,41 @@ function SettingsModal({
   showToast
 }) {
   var [url, setUrl] = useState(driveUrl || '');
+  var [testing, setTesting] = useState(false);
   var save = () => {
     onSave(url.trim());
     if (showToast) showToast('Nastavení uloženo');
     onClose();
+  };
+  var test = async () => {
+    var u = url.trim();
+    if (!u) {
+      if (showToast) showToast('Nejdřív vlož adresu skriptu', 'error');
+      return;
+    }
+    if (!/\/exec$/.test(u)) {
+      if (showToast) showToast('Adresa musí končit na /exec', 'error');
+      return;
+    }
+    setTesting(true);
+    if (showToast) showToast('Odesílám test na Disk…');
+    try {
+      await fetch(u, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify({
+          pdfBase64: btoa('LaundryCloud test'),
+          filename: 'LaundryCloud-TEST.pdf'
+        })
+      });
+      if (showToast) showToast('Test odeslán — hledej soubor LaundryCloud-TEST na Disku');
+    } catch (e) {
+      if (showToast) showToast('Test se nepodařilo odeslat: ' + (e.message || ''), 'error');
+    }
+    setTesting(false);
   };
   return /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4 print:hidden"
@@ -2569,15 +2607,25 @@ function SettingsModal({
     className: "w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
   }), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-1"
-  }, "Když je vyplněná, protokol se při uložení automaticky pošle do složky „Servisní protokoly\" na tvém Disku. Prázdné pole = ukládání na Disk vypnuté.")), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-end gap-2 pt-1"
+  }, "Když je vyplněná, protokol se při uložení automaticky pošle do složky „Servisní protokoly\" na tvém Disku. Prázdné pole = ukládání na Disk vypnuté."), driveUrl ? /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-green-600 mt-1"
+  }, "Aktuálně uložená adresa je nastavená ✓") : /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-amber-600 mt-1"
+  }, "Zatím není uložená žádná adresa.")), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap justify-between gap-2 pt-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: test,
+    disabled: testing,
+    className: "px-3 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 rounded text-sm font-medium"
+  }, testing ? 'Testuji…' : 'Otestovat spojení'), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     className: "px-3 py-2 text-slate-600 hover:bg-slate-100 rounded text-sm"
   }, "Zrušit"), /*#__PURE__*/React.createElement("button", {
     onClick: save,
     className: "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium"
-  }, "Uložit")))));
+  }, "Uložit"))))));
 }
 
 // Okno odeslání — otevře se hned, PDF se tvoří uvnitř; každá akce = samostatné ťuknutí (kvůli iOS sdílení)
