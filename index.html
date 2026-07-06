@@ -27,7 +27,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#b91c1c;font-size:14px;line-height:1.5">'
-        + '<strong>Chyba při načítání (v19)</strong><br>' + msg + '</div>';
+        + '<strong>Chyba při načítání (v20)</strong><br>' + msg + '</div>';
     }
   }
   window.addEventListener('error', function (e) {
@@ -43,7 +43,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#334155;font-size:14px;line-height:1.5">'
-        + '<strong>Verze v19 se načetla, ale aplikace se nevykreslila.</strong><br>'
+        + '<strong>Verze v20 se načetla, ale aplikace se nevykreslila.</strong><br>'
         + 'Zkuste stránku obnovit. Pokud to trvá, napište mi to.</div>';
     }
   }, 5000);
@@ -970,7 +970,7 @@ var Settings = ({
 }));
 
 // === Konstanty ===
-var APP_VERSION = 'v19';
+var APP_VERSION = 'v20';
 var COMPANY_EMAIL = 'Dvoracekroman@gmail.com';
 var TECHNICIAN_NAME = 'Roman Dvořáček';
 var COMPANY_NAME = 'Laundry Cloud s.r.o.';
@@ -1358,7 +1358,7 @@ function App() {
   var [driveUrl, setDriveUrl] = useState('');
   var [showSettings, setShowSettings] = useState(false);
   useEffect(() => {
-    loadProtocols();
+    loadProtocols(true);
   }, []);
   useEffect(() => {
     (async () => {
@@ -1374,8 +1374,8 @@ function App() {
       await storage.set('settings:driveUrl', url);
     } catch (e) {}
   };
-  var loadProtocols = async () => {
-    setLoading(true);
+  var loadProtocols = async initial => {
+    if (initial) setLoading(true);
     try {
       var result = await storage.list('protocols:');
       var keys = (result === null || result === void 0 ? void 0 : result.keys) || [];
@@ -1391,7 +1391,7 @@ function App() {
     } catch (e) {
       console.error('Načtení selhalo:', e);
     }
-    setLoading(false);
+    if (initial) setLoading(false);
   };
   var showToast = (msg, type = 'success') => {
     setToast({
@@ -1687,6 +1687,7 @@ function FormView({
   // Na pozadí: vytvoří náhled (dlaždice) a případně pošle PDF na Disk
   var afterSave = async proto => {
     if (driveUrl) showToast('Ukládám na Disk…');
+    await new Promise(r => setTimeout(r, 80));
     try {
       var canvas = await captureDocCanvas();
       if (!canvas) {
