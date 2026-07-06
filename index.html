@@ -27,7 +27,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#b91c1c;font-size:14px;line-height:1.5">'
-        + '<strong>Chyba při načítání (v21)</strong><br>' + msg + '</div>';
+        + '<strong>Chyba při načítání (v22)</strong><br>' + msg + '</div>';
     }
   }
   window.addEventListener('error', function (e) {
@@ -43,7 +43,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#334155;font-size:14px;line-height:1.5">'
-        + '<strong>Verze v21 se načetla, ale aplikace se nevykreslila.</strong><br>'
+        + '<strong>Verze v22 se načetla, ale aplikace se nevykreslila.</strong><br>'
         + 'Zkuste stránku obnovit. Pokud to trvá, napište mi to.</div>';
     }
   }, 5000);
@@ -970,7 +970,7 @@ var Settings = ({
 }));
 
 // === Konstanty ===
-var APP_VERSION = 'v21';
+var APP_VERSION = 'v22';
 var COMPANY_EMAIL = 'Dvoracekroman@gmail.com';
 var TECHNICIAN_NAME = 'Roman Dvořáček';
 var COMPANY_NAME = 'Laundry Cloud s.r.o.';
@@ -1263,8 +1263,23 @@ function blobToBase64(blob) {
   });
 }
 
-// Odeslání na Apps Script přes skrytý formulář + iframe (obchází CORS, Apps Script to bere spolehlivě)
+// Odeslání na Apps Script — dvěma cestami (fetch i formulář), ať to projde na iOS i desktopu.
+// Protokol se stejným názvem se ve skriptu přepisuje, takže duplicity nevznikají.
 function postToDrive(driveUrl, base64, filename) {
+  var ok = false;
+  // 1) fetch s form-daty (spolehlivé na iOS Safari)
+  try {
+    var params = new URLSearchParams();
+    params.append('pdfBase64', base64);
+    params.append('filename', filename);
+    fetch(driveUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: params
+    });
+    ok = true;
+  } catch (e) {}
+  // 2) záloha: skrytý formulář + iframe (spolehlivé na desktopu)
   try {
     var frame = document.getElementById('lc-drive-frame');
     if (!frame) {
@@ -1294,10 +1309,9 @@ function postToDrive(driveUrl, base64, filename) {
         form.remove();
       } catch (e) {}
     }, 4000);
-    return true;
-  } catch (e) {
-    return false;
-  }
+    ok = true;
+  } catch (e) {}
+  return ok;
 }
 async function uploadToDrive(driveUrl, blob, filename) {
   if (!driveUrl || !blob) return false;
