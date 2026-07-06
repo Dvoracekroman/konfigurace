@@ -27,7 +27,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#b91c1c;font-size:14px;line-height:1.5">'
-        + '<strong>Chyba při načítání (v16)</strong><br>' + msg + '</div>';
+        + '<strong>Chyba při načítání (v18)</strong><br>' + msg + '</div>';
     }
   }
   window.addEventListener('error', function (e) {
@@ -43,7 +43,7 @@
     var r = document.getElementById('root');
     if (r && (!r.innerHTML || r.innerHTML.length < 40)) {
       r.innerHTML = '<div style="padding:20px;font-family:-apple-system,sans-serif;color:#334155;font-size:14px;line-height:1.5">'
-        + '<strong>Verze v16 se načetla, ale aplikace se nevykreslila.</strong><br>'
+        + '<strong>Verze v18 se načetla, ale aplikace se nevykreslila.</strong><br>'
         + 'Zkuste stránku obnovit. Pokud to trvá, napište mi to.</div>';
     }
   }, 5000);
@@ -957,9 +957,20 @@ var PenLine = ({
 }, /*#__PURE__*/React.createElement("path", {
   d: "M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"
 }));
+var Settings = ({
+  className
+}) => /*#__PURE__*/React.createElement(Svg, {
+  className: className
+}, /*#__PURE__*/React.createElement("circle", {
+  cx: "12",
+  cy: "12",
+  r: "3"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+}));
 
 // === Konstanty ===
-var APP_VERSION = 'v16';
+var APP_VERSION = 'v18';
 var COMPANY_EMAIL = 'Dvoracekroman@gmail.com';
 var TECHNICIAN_NAME = 'Roman Dvořáček';
 var COMPANY_NAME = 'Laundry Cloud s.r.o.';
@@ -1066,16 +1077,44 @@ var fetchAresFallback = async ico => {
 
 // Vytvoří PDF protokolu jako Blob (pro sdílení / přílohu e-mailu).
 // Vyžaduje knihovny html2canvas a jspdf — jsou součástí nasazené (HTML) verze.
-async function buildPdfBlob() {
+// Jeden záběr dokumentu (sdílený pro náhled i PDF)
+async function captureDocCanvas() {
   var el = document.getElementById('protocol-print-doc') || document.getElementById('protocol-print-area');
-  if (!el || typeof window.html2canvas !== 'function' || !window.jspdf) return null;
-  var scale = 2;
-  var canvas = await window.html2canvas(el, {
-    scale,
+  if (!el || typeof window.html2canvas !== 'function') return null;
+  return await window.html2canvas(el, {
+    scale: 2,
     backgroundColor: '#ffffff',
     useCORS: true,
     ignoreElements: n => !!(n.classList && n.classList.contains('print:hidden'))
   });
+}
+
+// Malý obrázkový náhled (horní část dokumentu) pro dlaždici v seznamu
+function canvasToThumb(canvas) {
+  if (!canvas) return '';
+  try {
+    var targetW = 360;
+    var ratio = targetW / canvas.width;
+    var fullH = Math.round(canvas.height * ratio);
+    var targetH = Math.min(Math.round(targetW * 1.25), fullH);
+    var c = document.createElement('canvas');
+    c.width = targetW;
+    c.height = targetH;
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, targetW, targetH);
+    var srcH = Math.round(targetH / ratio);
+    ctx.drawImage(canvas, 0, 0, canvas.width, srcH, 0, 0, targetW, targetH);
+    return c.toDataURL('image/jpeg', 0.7);
+  } catch (e) {
+    return '';
+  }
+}
+
+// Sestavení PDF z připraveného záběru (okraje, chytré stránkování, opakovaná hlavička, číslování)
+function canvasToPdfBlob(canvas, el) {
+  if (!canvas || !window.jspdf) return null;
+  var scale = 2;
   var {
     jsPDF
   } = window.jspdf;
@@ -1088,21 +1127,40 @@ async function buildPdfBlob() {
   var margin = 10;
   var footerSpace = 8;
   var contentWmm = pageWmm - margin * 2;
-  var usableHmm = pageHmm - margin * 2 - footerSpace;
   var docTop = el.getBoundingClientRect().top;
   var docWidthCss = el.offsetWidth || 794;
   var totalPx = el.getBoundingClientRect().height || canvas.height / scale;
   var pxToMm = contentWmm / docWidthCss;
+  var headerHpx = 0;
+  try {
+    var hEl = el.querySelector('[data-pdfheader]');
+    if (hEl) headerHpx = hEl.getBoundingClientRect().bottom - docTop;
+  } catch (e) {
+    headerHpx = 0;
+  }
+  var headerHmm = headerHpx * pxToMm;
+  var headerImg = null;
+  if (headerHpx > 2) {
+    var hc = document.createElement('canvas');
+    hc.width = canvas.width;
+    hc.height = Math.max(1, Math.round(headerHpx * scale));
+    var hctx = hc.getContext('2d');
+    hctx.fillStyle = '#ffffff';
+    hctx.fillRect(0, 0, hc.width, hc.height);
+    hctx.drawImage(canvas, 0, 0, canvas.width, hc.height, 0, 0, canvas.width, hc.height);
+    headerImg = hc.toDataURL('image/jpeg', 0.95);
+  }
+  var usableHmm = pageHmm - margin * 2 - footerSpace - headerHmm;
   var usableHpx = usableHmm / pxToMm;
-
-  // hranice bloků, na kterých se smí zalomit (aby se nic nepřeseklo)
   var blocks = [];
   try {
     el.querySelectorAll('[data-pdfblock]').forEach(b => {
       var r = b.getBoundingClientRect();
-      blocks.push({
-        top: r.top - docTop,
-        bottom: r.bottom - docTop,
+      var top = r.top - docTop;
+      var bottom = r.bottom - docTop;
+      if (bottom > headerHpx + 1) blocks.push({
+        top,
+        bottom,
         head: b.hasAttribute('data-pdfhead')
       });
     });
@@ -1110,16 +1168,15 @@ async function buildPdfBlob() {
   } catch (e) {
     blocks = [];
   }
-
-  // rozdělení na stránky
+  var contentStart = headerHpx;
   var pages = [];
-  if (totalPx <= usableHpx + 1) {
+  if (totalPx - contentStart <= usableHpx + 1) {
     pages.push({
-      start: 0,
+      start: contentStart,
       end: totalPx
     });
   } else if (blocks.length === 0) {
-    var start = 0;
+    var start = contentStart;
     while (start < totalPx - 1) {
       var end = Math.min(start + usableHpx, totalPx);
       pages.push({
@@ -1129,9 +1186,9 @@ async function buildPdfBlob() {
       start = end;
     }
   } else {
-    var _start = 0;
+    var _start = contentStart;
     var guard = 0;
-    var _loop = async function () {
+    var _loop = function () {
       guard++;
       var limit = _start + usableHpx;
       if (limit >= totalPx) {
@@ -1147,9 +1204,8 @@ async function buildPdfBlob() {
         if (b.bottom > _start && b.bottom <= limit) cut = b.bottom;
       }
       if (cut <= _start) {
-        cut = limit; // jeden blok je vyšší než stránka → tvrdý řez
+        cut = limit;
       } else {
-        // nenech osamocený nadpis sekce na konci stránky
         var cb = blocks.find(b => b.bottom === cut);
         if (cb && cb.head && cb.top > _start) cut = cb.top;
       }
@@ -1159,12 +1215,18 @@ async function buildPdfBlob() {
       });
       _start = cut;
     };
-    while (_start < totalPx - 1 && guard < 200) {
-      if (await _loop()) break;
+    while (_start < totalPx - 1 && guard < 300) {
+      if (_loop()) break;
     }
   }
   var totalPages = pages.length;
   for (var pi = 0; pi < pages.length; pi++) {
+    if (pi > 0) pdf.addPage();
+    var y = margin;
+    if (headerImg) {
+      pdf.addImage(headerImg, 'JPEG', margin, y, contentWmm, headerHmm);
+      y += headerHmm;
+    }
     var seg = pages[pi];
     var segHpx = Math.max(1, Math.round((seg.end - seg.start) * scale));
     var slice = document.createElement('canvas');
@@ -1176,8 +1238,7 @@ async function buildPdfBlob() {
     ctx.drawImage(canvas, 0, Math.round(seg.start * scale), canvas.width, segHpx, 0, 0, canvas.width, segHpx);
     var img = slice.toDataURL('image/jpeg', 0.92);
     var imgHmm = (seg.end - seg.start) * pxToMm;
-    if (pi > 0) pdf.addPage();
-    pdf.addImage(img, 'JPEG', margin, margin, contentWmm, Math.min(imgHmm, usableHmm));
+    pdf.addImage(img, 'JPEG', margin, y, contentWmm, imgHmm);
     pdf.setFontSize(8);
     pdf.setTextColor(150, 150, 150);
     pdf.text('Strana ' + (pi + 1) + '/' + totalPages, pageWmm - margin, pageHmm - margin + 3, {
@@ -1185,6 +1246,43 @@ async function buildPdfBlob() {
     });
   }
   return pdf.output('blob');
+}
+async function buildPdfBlob() {
+  var el = document.getElementById('protocol-print-doc') || document.getElementById('protocol-print-area');
+  if (!el) return null;
+  var canvas = await captureDocCanvas();
+  if (!canvas) return null;
+  return canvasToPdfBlob(canvas, el);
+}
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    var r = new FileReader();
+    r.onloadend = () => resolve(String(r.result).split(',')[1] || '');
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+// Odeslání PDF do Google Apps Scriptu (uloží na Disk). Fire-and-forget kvůli omezením prohlížeče.
+async function uploadToDrive(driveUrl, blob, filename) {
+  if (!driveUrl || !blob) return false;
+  try {
+    var base64 = await blobToBase64(blob);
+    await fetch(driveUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify({
+        pdfBase64: base64,
+        filename: filename
+      })
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 var compressImage = file => new Promise((resolve, reject) => {
   var reader = new FileReader();
@@ -1245,7 +1343,8 @@ var blankProtocol = () => ({
   supplierSignature: '',
   customerSignature: '',
   photosBefore: [],
-  photosAfter: []
+  photosAfter: [],
+  thumbnail: ''
 });
 
 // === Hlavní aplikace ===
@@ -1256,9 +1355,25 @@ function App() {
   var [current, setCurrent] = useState(null);
   var [search, setSearch] = useState('');
   var [toast, setToast] = useState(null);
+  var [driveUrl, setDriveUrl] = useState('');
+  var [showSettings, setShowSettings] = useState(false);
   useEffect(() => {
     loadProtocols();
   }, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        var r = await storage.get('settings:driveUrl');
+        if (r && r.value) setDriveUrl(r.value);
+      } catch (e) {}
+    })();
+  }, []);
+  var saveDriveUrl = async url => {
+    setDriveUrl(url);
+    try {
+      await storage.set('settings:driveUrl', url);
+    } catch (e) {}
+  };
   var loadProtocols = async () => {
     setLoading(true);
     try {
@@ -1295,10 +1410,10 @@ function App() {
     setCurrent(protocol);
     setView('form');
   };
-  var handleSave = async protocol => {
+  var handleSave = async (protocol, silent) => {
     try {
       await storage.set(`protocols:${protocol.id}`, JSON.stringify(protocol));
-      showToast('Uloženo');
+      if (!silent) showToast('Uloženo');
       await loadProtocols();
       setCurrent(protocol);
       return true;
@@ -1365,7 +1480,13 @@ function App() {
     className: "flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     className: "w-4 h-4"
-  }), " Zpět"))), /*#__PURE__*/React.createElement("main", {
+  }), " Zpět"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowSettings(true),
+    title: "Nastavení",
+    className: "w-9 h-9 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded transition-colors shrink-0"
+  }, /*#__PURE__*/React.createElement(Settings, {
+    className: "w-4 h-4"
+  })))), /*#__PURE__*/React.createElement("main", {
     className: "max-w-5xl mx-auto px-4 py-6 print:p-0 print:max-w-none"
   }, loading ? /*#__PURE__*/React.createElement("div", {
     className: "text-center py-20 text-slate-500"
@@ -1384,8 +1505,14 @@ function App() {
     onClose: handleClose,
     onReopen: handleReopen,
     onDelete: handleDelete,
+    showToast: showToast,
+    driveUrl: driveUrl
+  })), showSettings && /*#__PURE__*/React.createElement(SettingsModal, {
+    driveUrl: driveUrl,
+    onSave: saveDriveUrl,
+    onClose: () => setShowSettings(false),
     showToast: showToast
-  })), toast && /*#__PURE__*/React.createElement("div", {
+  }), toast && /*#__PURE__*/React.createElement("div", {
     className: `fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded shadow-lg text-white print:hidden z-50 ${toast.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`
   }, toast.msg));
 }
@@ -1430,7 +1557,7 @@ function ListView({
   }, "Vytvoř první servisní protokol kliknutím na tlačítko výše.")) : protocols.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-lg border border-slate-200 p-8 text-center text-slate-500"
   }, "Nic nenalezeno pro „", search, "\"") : /*#__PURE__*/React.createElement("div", {
-    className: "space-y-2"
+    className: "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"
   }, protocols.map(p => /*#__PURE__*/React.createElement(ProtocolCard, {
     key: p.id,
     protocol: p,
@@ -1445,27 +1572,41 @@ function ProtocolCard({
 }) {
   var machine = [protocol.manufacturer, protocol.model].filter(Boolean).join(' ');
   return /*#__PURE__*/React.createElement("div", {
-    className: "bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors overflow-hidden"
+    className: "bg-white rounded-lg border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all overflow-hidden flex flex-col"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => onOpen(protocol),
-    className: "w-full p-4 text-left hover:bg-slate-50 transition-colors"
+    className: "block text-left"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-start justify-between gap-3 mb-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "font-mono font-bold text-slate-900 text-base"
-  }, protocol.id), /*#__PURE__*/React.createElement(StatusBadge, {
+    className: "aspect-[3/4] bg-slate-100 overflow-hidden border-b border-slate-200 relative"
+  }, protocol.thumbnail ? /*#__PURE__*/React.createElement("img", {
+    src: protocol.thumbnail,
+    alt: "",
+    className: "w-full h-full object-cover object-top"
+  }) : /*#__PURE__*/React.createElement("div", {
+    className: "w-full h-full flex flex-col items-center justify-center text-slate-300"
+  }, /*#__PURE__*/React.createElement(FileText, {
+    className: "w-10 h-10 mb-1"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-slate-400"
+  }, "bez náhledu")), /*#__PURE__*/React.createElement("div", {
+    className: "absolute top-1.5 right-1.5"
+  }, /*#__PURE__*/React.createElement(StatusBadge, {
     status: protocol.status
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "text-sm text-slate-700 truncate"
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "p-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-mono font-bold text-slate-900 text-xs truncate"
+  }, protocol.id), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm text-slate-700 truncate mt-0.5"
   }, protocol.customer || /*#__PURE__*/React.createElement("span", {
     className: "text-slate-400 italic"
   }, "bez zákazníka")), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1"
-  }, machine && /*#__PURE__*/React.createElement("span", null, machine), protocol.serviceDate && /*#__PURE__*/React.createElement("span", null, formatCZ(protocol.serviceDate)))), /*#__PURE__*/React.createElement("div", {
-    className: "border-t border-slate-100 px-4 py-2 flex justify-end"
+    className: "text-[11px] text-slate-500 mt-0.5 truncate"
+  }, [machine, protocol.serviceDate ? formatCZ(protocol.serviceDate) : ''].filter(Boolean).join(' · ')))), /*#__PURE__*/React.createElement("div", {
+    className: "border-t border-slate-100 px-2.5 py-1.5 flex justify-end mt-auto"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => onDelete(protocol.id),
-    className: "text-xs text-red-600 hover:text-red-700 flex items-center gap-1 px-2 py-1 rounded hover:bg-red-50"
+    className: "text-[11px] text-red-600 hover:text-red-700 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-red-50"
   }, /*#__PURE__*/React.createElement(Trash2, {
     className: "w-3 h-3"
   }), " Smazat")));
@@ -1494,7 +1635,8 @@ function FormView({
   onClose,
   onReopen,
   onDelete,
-  showToast
+  showToast,
+  driveUrl
 }) {
   var [p, setP] = useState(protocol);
   var [dirty, setDirty] = useState(false);
@@ -1541,9 +1683,33 @@ function FormView({
     }
     setAresLoading(false);
   };
+
+  // Na pozadí: vytvoří náhled (dlaždice) a případně pošle PDF na Disk
+  var afterSave = async proto => {
+    try {
+      var canvas = await captureDocCanvas();
+      if (!canvas) return;
+      var thumb = canvasToThumb(canvas);
+      var withThumb = _objectSpread(_objectSpread({}, proto), {}, {
+        thumbnail: thumb
+      });
+      await onSave(withThumb, true);
+      if (driveUrl) {
+        var el = document.getElementById('protocol-print-doc');
+        var blob = canvasToPdfBlob(canvas, el);
+        if (blob) {
+          showToast('Ukládám na Disk…');
+          uploadToDrive(driveUrl, blob, (proto.id || 'protokol') + '.pdf');
+        }
+      }
+    } catch (e) {/* náhled/Disk jsou best-effort */}
+  };
   var handleSaveClick = async () => {
     var ok = await onSave(p);
-    if (ok) setDirty(false);
+    if (ok) {
+      setDirty(false);
+      afterSave(p);
+    }
   };
   var handleCloseClick = async () => {
     if (!p.customer.trim()) {
@@ -1554,6 +1720,7 @@ function FormView({
     var closed = await onClose(p);
     setP(closed);
     setDirty(false);
+    afterSave(closed);
   };
   var handleSendEmail = async () => {
     if (dirty) {
@@ -2141,7 +2308,8 @@ function PrintDocument({
       fontFamily: '-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    "data-pdfblock": true
+    "data-pdfblock": true,
+    "data-pdfheader": true
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-900 text-white px-8 py-5 flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("div", {
@@ -2363,6 +2531,53 @@ function PrintDocument({
     "data-pdfblock": true,
     className: "mt-6 pt-3 border-t border-slate-200 flex items-center justify-between text-[9px] text-slate-400"
   }, /*#__PURE__*/React.createElement("span", null, COMPANY_NAME, " • IČO ", COMPANY_ICO, " • ", COMPANY_ADDRESS), /*#__PURE__*/React.createElement("span", null, "Vystaveno ", gen)))));
+}
+function SettingsModal({
+  driveUrl,
+  onSave,
+  onClose,
+  showToast
+}) {
+  var [url, setUrl] = useState(driveUrl || '');
+  var save = () => {
+    onSave(url.trim());
+    if (showToast) showToast('Nastavení uloženo');
+    onClose();
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4 print:hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-t-2xl sm:rounded-lg shadow-xl w-full sm:max-w-lg"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-4 py-3 border-b border-slate-200 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-semibold text-slate-800"
+  }, "Nastavení"), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "text-slate-400 hover:text-slate-600"
+  }, /*#__PURE__*/React.createElement(X, {
+    className: "w-5 h-5"
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "p-4 space-y-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-medium text-slate-600 mb-1"
+  }, "Adresa skriptu pro ukládání na Google Disk"), /*#__PURE__*/React.createElement("input", {
+    type: "url",
+    value: url,
+    onChange: e => setUrl(e.target.value),
+    placeholder: "https://script.google.com/macros/s/.../exec",
+    className: "w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 mt-1"
+  }, "Když je vyplněná, protokol se při uložení automaticky pošle do složky „Servisní protokoly\" na tvém Disku. Prázdné pole = ukládání na Disk vypnuté.")), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-end gap-2 pt-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "px-3 py-2 text-slate-600 hover:bg-slate-100 rounded text-sm"
+  }, "Zrušit"), /*#__PURE__*/React.createElement("button", {
+    onClick: save,
+    className: "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium"
+  }, "Uložit")))));
 }
 
 // Okno odeslání — otevře se hned, PDF se tvoří uvnitř; každá akce = samostatné ťuknutí (kvůli iOS sdílení)
